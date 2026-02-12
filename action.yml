@@ -257,11 +257,62 @@ runs:
         }
       shell: pwsh
 
+    - name: Verify PGP signature (Windows)
+      if: runner.os == 'Windows' && inputs.source == 'swift.org'
+      run: |
+        Write-Host "Importing Swift PGP keys..."
+        curl.exe -sL https://www.swift.org/keys/all-keys.asc | gpg --import -
+
+        $SigURL = if ("${{ inputs.build_arch }}" -eq "amd64") {
+          "https://download.swift.org/${env:RESOLVED_SWIFT_VERSION}/windows10/swift-${env:RESOLVED_SWIFT_BUILD}/swift-${env:RESOLVED_SWIFT_BUILD}-windows10.exe.sig"
+        } else {
+          "https://download.swift.org/${env:RESOLVED_SWIFT_VERSION}/windows10-${{ inputs.build_arch }}/swift-${env:RESOLVED_SWIFT_BUILD}/swift-${env:RESOLVED_SWIFT_BUILD}-windows10-${{ inputs.build_arch }}.exe.sig"
+        }
+
+        $InstallerPath = [IO.Path]::Combine(${env:Temp}, "installer.exe")
+        $SigPath = [IO.Path]::Combine(${env:Temp}, "installer.exe.sig")
+
+        Write-Host "Downloading signature file from $SigURL..."
+        (New-Object System.Net.WebClient).DownloadFile($SigURL, $SigPath)
+
+        Write-Host "Verifying signature..."
+        $VerifyResult = gpg --verify $SigPath $InstallerPath 2>&1
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "::notice::Signature verification successful"
+          Remove-Item $SigPath -Force
+        } else {
+          Write-Host "::error::Signature verification failed"
+          Write-Host $VerifyResult
+          exit 1
+        }
+      shell: pwsh
+
     - name: Fetch installer from swift.org (Linux)
       if: runner.os == 'Linux' && inputs.source == 'swift.org' && (inputs.cache != 'true' || steps.cache-restore.outputs.cache-hit != 'true')
       run: |
         source /etc/os-release
         curl -sL https://download.swift.org/${RESOLVED_SWIFT_VERSION}/ubuntu${VERSION_ID/./}/swift-${RESOLVED_SWIFT_BUILD}/swift-${RESOLVED_SWIFT_BUILD}-ubuntu${VERSION_ID}.tar.gz -o swift-toolchain.tar.gz
+      shell: bash
+
+    - name: Verify PGP signature (Linux)
+      if: runner.os == 'Linux' && inputs.source == 'swift.org'
+      run: |
+        source /etc/os-release
+
+        echo "Importing Swift PGP keys..."
+        curl -sL https://www.swift.org/keys/all-keys.asc | gpg --import -
+
+        echo "Downloading signature file..."
+        curl -sL https://download.swift.org/${RESOLVED_SWIFT_VERSION}/ubuntu${VERSION_ID/./}/swift-${RESOLVED_SWIFT_BUILD}/swift-${RESOLVED_SWIFT_BUILD}-ubuntu${VERSION_ID}.tar.gz.sig -o swift-toolchain.tar.gz.sig
+
+        echo "Verifying signature..."
+        if gpg --verify swift-toolchain.tar.gz.sig swift-toolchain.tar.gz; then
+          echo "::notice::Signature verification successful"
+          rm swift-toolchain.tar.gz.sig
+        else
+          echo "::error::Signature verification failed"
+          exit 1
+        fi
       shell: bash
 
     - name: Fetch installer from swift.org (macOS)
