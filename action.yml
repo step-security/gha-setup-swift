@@ -257,6 +257,36 @@ runs:
         }
       shell: pwsh
 
+    - name: Verify PGP signature (Windows)
+      if: runner.os == 'Windows' && inputs.source == 'swift.org'
+      run: |
+        Write-Host "Importing Swift PGP keys..."
+        curl.exe -sL https://www.swift.org/keys/all-keys.asc | gpg --import -
+
+        $SigURL = if ("${{ inputs.build_arch }}" -eq "amd64") {
+          "https://download.swift.org/${env:RESOLVED_SWIFT_VERSION}/windows10/swift-${env:RESOLVED_SWIFT_BUILD}/swift-${env:RESOLVED_SWIFT_BUILD}-windows10.exe.sig"
+        } else {
+          "https://download.swift.org/${env:RESOLVED_SWIFT_VERSION}/windows10-${{ inputs.build_arch }}/swift-${env:RESOLVED_SWIFT_BUILD}/swift-${env:RESOLVED_SWIFT_BUILD}-windows10-${{ inputs.build_arch }}.exe.sig"
+        }
+
+        $InstallerPath = [IO.Path]::Combine(${env:Temp}, "installer.exe")
+        $SigPath = [IO.Path]::Combine(${env:Temp}, "installer.exe.sig")
+
+        Write-Host "Downloading signature file from $SigURL..."
+        (New-Object System.Net.WebClient).DownloadFile($SigURL, $SigPath)
+
+        Write-Host "Verifying signature..."
+        $VerifyResult = gpg --verify $SigPath $InstallerPath 2>&1
+        if ($LASTEXITCODE -eq 0) {
+          Write-Host "::notice::Signature verification successful"
+          Remove-Item $SigPath -Force
+        } else {
+          Write-Host "::error::Signature verification failed"
+          Write-Host $VerifyResult
+          exit 1
+        }
+      shell: pwsh
+
     - name: Fetch installer from swift.org (Linux)
       if: runner.os == 'Linux' && inputs.source == 'swift.org' && (inputs.cache != 'true' || steps.cache-restore.outputs.cache-hit != 'true')
       run: |
@@ -294,6 +324,12 @@ runs:
     - name: Verify PGP signature (macOS)
       if: runner.os == 'macOS' && inputs.source == 'swift.org'
       run: |
+        # Install GPG if not available
+        if ! command -v gpg &> /dev/null; then
+          echo "Installing GPG..."
+          brew install gnupg
+        fi
+
         echo "Importing Swift PGP keys..."
         curl -sL https://www.swift.org/keys/all-keys.asc | gpg --import -
 
