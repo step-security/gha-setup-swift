@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - uses: step-security/gha-setup-vsdevenv@release #update ref post release
+    - uses: step-security/gha-setup-vsdevenv@v6
       if: ${{ runner.os == 'windows' }}
 
     - name: Install Swift
@@ -53,7 +53,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
-    - uses: step-security/gha-setup-vsdevenv@release #update ref post release
+    - uses: step-security/gha-setup-vsdevenv@v6
 
     - name: Install Swift without the IDE component
       uses: ./
@@ -76,7 +76,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
-    - uses: step-security/gha-setup-vsdevenv@release #update ref post release
+    - uses: step-security/gha-setup-vsdevenv@v6
 
     - name: Install Swift with SDK module updates
       uses: ./
