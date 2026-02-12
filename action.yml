@@ -270,6 +270,48 @@ runs:
         curl -sOL https://download.swift.org/${RESOLVED_SWIFT_VERSION}/xcode/swift-${RESOLVED_SWIFT_BUILD}/swift-${RESOLVED_SWIFT_BUILD}-osx.pkg
       shell: bash
 
+    - name: Verify installer signature (Linux)
+      if: runner.os == 'Linux' && inputs.source == 'swift.org' && (inputs.cache != 'true' || steps.cache-restore.outputs.cache-hit != 'true')
+      run: |
+        source /etc/os-release
+        # Import swift.org PGP signing keys
+        curl -sL https://swift.org/keys/all-keys.asc | gpg --import -
+        # Download the PGP signature file
+        curl -sL "https://download.swift.org/${RESOLVED_SWIFT_VERSION}/ubuntu${VERSION_ID/./}/swift-${RESOLVED_SWIFT_BUILD}/swift-${RESOLVED_SWIFT_BUILD}-ubuntu${VERSION_ID}.tar.gz.sig" -o swift-toolchain.tar.gz.sig
+        # Verify the signature
+        gpg --verify swift-toolchain.tar.gz.sig swift-toolchain.tar.gz
+      shell: bash
+
+    - name: Verify installer signature (macOS)
+      if: runner.os == 'macOS' && inputs.source == 'swift.org' && (inputs.cache != 'true' || steps.cache-restore.outputs.cache-hit != 'true')
+      run: |
+        PKG_FILE="swift-${RESOLVED_SWIFT_BUILD}-osx.pkg"
+        echo "Verifying package signature for ${PKG_FILE}..."
+        SIGNATURE_OUTPUT=$(pkgutil --check-signature "${PKG_FILE}" 2>&1)
+        echo "${SIGNATURE_OUTPUT}"
+        if echo "${SIGNATURE_OUTPUT}" | grep -q "Developer ID Installer: Swift Open Source (V9AUD2URP3)"; then
+          echo "Package signature verified successfully."
+        else
+          echo "::error::Package signature verification failed. Expected 'Developer ID Installer: Swift Open Source (V9AUD2URP3)'"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Verify installer signature (Windows)
+      if: runner.os == 'Windows' && inputs.source == 'swift.org' && (inputs.cache != 'true' || steps.cache-restore.outputs.cache-hit != 'true')
+      run: |
+        $InstallerPath = [IO.Path]::Combine(${env:Temp}, "installer.exe")
+        Write-Host "Verifying Authenticode signature for $InstallerPath..."
+        $Signature = Get-AuthenticodeSignature -FilePath $InstallerPath
+        Write-Host "Signature status: $($Signature.Status)"
+        Write-Host "Signer: $($Signature.SignerCertificate.Subject)"
+        if ($Signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
+          Write-Host "::error::Authenticode signature verification failed. Status: $($Signature.Status)"
+          exit 1
+        }
+        Write-Host "Authenticode signature verified successfully."
+      shell: pwsh
+
     - name: Save toolchain to cache
       if: inputs.cache == 'true' && steps.cache-restore.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5
