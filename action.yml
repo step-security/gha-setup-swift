@@ -283,11 +283,22 @@ runs:
       if: runner.os == 'Linux' && inputs.source == 'swift.org' && (inputs.cache != 'true' || steps.cache-restore.outputs.cache-hit != 'true')
       run: |
         # Import Swift PGP keys
-        curl -sL https://www.swift.org/keys/all-keys.asc | gpg --import -
+        # Primary: fetch from swift.org (with -f to detect Cloudflare blocks)
+        # Fallback: use keyserver.ubuntu.com with known Swift signing key fingerprints
+        if curl -sfL https://www.swift.org/keys/all-keys.asc -o /tmp/swift-keys.asc && [ -s /tmp/swift-keys.asc ] && head -1 /tmp/swift-keys.asc | grep -q "BEGIN PGP PUBLIC KEY BLOCK"; then
+          echo "Importing Swift PGP keys from swift.org"
+          gpg --import /tmp/swift-keys.asc
+          rm -f /tmp/swift-keys.asc
+        else
+          echo "swift.org key fetch failed (likely Cloudflare challenge), falling back to keyserver"
+          gpg --batch --quiet --keyserver hkp://keyserver.ubuntu.com --recv-keys \
+            'A62A E125 BBBF BB96 A6E0 42EC 925C C1CC ED3D 1561' \
+            'E813 C892 820A 6FA1 3755 B268 F167 DF1A CF9C E069'
+        fi
 
         # Download the signature file
         source /etc/os-release
-        curl -sL "https://download.swift.org/${RESOLVED_SWIFT_VERSION}/ubuntu${VERSION_ID/./}/swift-${RESOLVED_SWIFT_BUILD}/swift-${RESOLVED_SWIFT_BUILD}-ubuntu${VERSION_ID}.tar.gz.sig" -o swift-toolchain.tar.gz.sig
+        curl -sfL --retry 3 --retry-delay 5 "https://download.swift.org/${RESOLVED_SWIFT_VERSION}/ubuntu${VERSION_ID/./}/swift-${RESOLVED_SWIFT_BUILD}/swift-${RESOLVED_SWIFT_BUILD}-ubuntu${VERSION_ID}.tar.gz.sig" -o swift-toolchain.tar.gz.sig
 
         # Verify the signature
         gpg --verify swift-toolchain.tar.gz.sig swift-toolchain.tar.gz
