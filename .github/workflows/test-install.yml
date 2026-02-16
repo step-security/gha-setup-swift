@@ -20,9 +20,14 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v6
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+      with:
+        egress-policy: audit
 
-    - uses: step-security/gha-setup-vsdevenv@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - uses: step-security/gha-setup-vsdevenv@43a49e2f2d497418d2e28b8bb6e6e7150885ae86 # v6.0.0
       if: ${{ runner.os == 'windows' }}
 
     - name: Install Swift
@@ -52,8 +57,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v6
-    - uses: step-security/gha-setup-vsdevenv@v6
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: step-security/gha-setup-vsdevenv@43a49e2f2d497418d2e28b8bb6e6e7150885ae86 # v6.0.0
 
     - name: Install Swift without the IDE component
       uses: ./
@@ -75,8 +85,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v6
-    - uses: step-security/gha-setup-vsdevenv@v6
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: step-security/gha-setup-vsdevenv@43a49e2f2d497418d2e28b8bb6e6e7150885ae86 # v6.0.0
 
     - name: Install Swift with SDK module updates
       uses: ./
