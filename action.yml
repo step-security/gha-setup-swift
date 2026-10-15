@@ -425,7 +425,7 @@ runs:
 
     - name: VS2022 Compatibility Setup
       if: runner.os == 'Windows' && steps.swift-version.outputs.is_newer_than_5_9 == 'false'
-      uses: step-security/gha-setup-vsdevenv@43a49e2f2d497418d2e28b8bb6e6e7150885ae86 # v6.0.0
+      uses: step-security/gha-setup-vsdevenv@4162789192a5d25127383e0c2c7ff1d184c6fead # v6.0.1
 
     - name: VS2022 Compatibility Installation
       if: runner.os == 'Windows' && steps.swift-version.outputs.is_newer_than_5_9 == 'false'
