@@ -1,0 +1,12 @@
+{
+  "$comment": "Managed automatically when syncing with upstream. Do not edit by hand.",
+  "schema_version": 1,
+  "onboarding_type": "copied",
+  "action_type": "composite",
+  "upstream": {
+    "repository": "compnerd/gha-setup-swift",
+    "synced_tag": "v0.5.1",
+    "synced_commit": "9ff1ee4c44888c5817fc14d1b257ac8cabb4935f",
+    "archived": false
+  }
+}
